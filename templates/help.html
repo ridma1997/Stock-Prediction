@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help - Stock Price Prediction</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mt-5">Help - Stock Price Prediction</h1>
+        <h2>Getting Started</h2>
+        <p>To use the Stock Price Prediction platform, follow these steps:</p>
+        <ol>
+            <li><strong>Register/Login:</strong> Create an account or log in if you already have one.</li>
+            <li><strong>Get Stock Data:</strong> 
+                <ul>
+                    <li>Enter the stock ticker symbol (e.g., AAPL for Apple).</li>
+                    <li>Select the data interval (Day, Week, Month, Quarter).</li>
+                    <li>Choose the type of data (Profit or Interest).</li>
+                    <li>Click the "Get Data" button to fetch and view the stock data.</li>
+                </ul>
+            </li>
+            <li><strong>Profit Query:</strong> 
+                <ul>
+                    <li>Enter the desired profit target in pounds.</li>
+                    <li>Select the period over which you want to achieve the profit (Day, Week, Month, Quarter).</li>
+                    <li>Choose the data interval (Day, Week, Month, Quarter).</li>
+                    <li>Click the "Get Stocks" button to see which stocks meet your profit criteria.</li>
+                </ul>
+            </li>
+            <li><strong>Future Forecast Prediction:</strong> 
+                <ul>
+                    <li>Enter the stock ticker symbol.</li>
+                    <li>Click the "Get Prediction" button to view future stock price predictions up to 2024-12-31.</li>
+                </ul>
+            </li>
+            <li><strong>Logout:</strong> Click the "Logout" button when you are done.</li>
+        </ol>
+        <p>If you have any questions or need further assistance, please contact support at support@example.com.</p>
+        <p><a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a></p>
+    </div>
+</body>
+</html>

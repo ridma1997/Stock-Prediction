@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Prediction</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: darkgrey;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            padding: 20px;
+        }
+        .table-responsive {
+            margin-top: 20px;
+            max-height: 400px; /* Adjust as needed */
+            overflow-y: auto;
+        }
+        th, td {
+            text-align: center;
+        }
+        #chart, #forecast-chart {
+            width: 100%;
+            height: 600px;
+            margin-top: 20px;
+        }
+        .scrollable {
+            max-height: 200px; /* Adjust the height as needed */
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mt-5">Stock Price Prediction</h1>
+        {% if current_user.is_authenticated %}
+        <form id="stock-form" class="mt-4">
+            <div class="form-row">
+                <div class="form-group col-md-3">
+                    <label for="ticker">Enter Stock Ticker:</label>
+                    <input type="text" class="form-control" id="ticker" name="ticker" required>
+                </div>
+                <div class="form-group col-md-3">
+                    <label for="interval">Select Interval:</label>
+                    <select class="form-control" id="interval" name="interval">
+                        <option value="1d">Day</option>
+                        <option value="1wk">Week</option>
+                        <option value="1mo">Month</option>
+                        <option value="3mo">Quarter</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-3">
+                    <label for="stock_type">Select Type:</label>
+                    <select class="form-control" id="stock_type" name="stock_type">
+                        <option value="profit">Profit</option>
+                        <option value="interest">Interest</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-3 align-self-end">
+                    <button type="submit" class="btn btn-primary btn-block">Get Data</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-bordered" id="stock-table">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Opening Price</th>
+                        <th>Closing Price</th>
+                        <th>High Price</th>
+                        <th>Low Price</th>
+                        <th>Predicted Price</th>
+                        <th>Profit/Interest</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="chart"></div>
+
+        <h2 class="text-center mt-5">Profit Query</h2>
+        <form id="profit-form" class="mt-4">
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="profit-target">Enter Profit Target (£):</label>
+                    <input type="number" class="form-control" id="profit-target" name="profit_target" required>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="period">Select Period:</label>
+                    <select class="form-control" id="period" name="period">
+                        <option value="day">Day</option>
+                        <option value="week">Week</option>
+                        <option value="month">Month</option>
+                        <option value="quarter">Quarter</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="interval">Select Interval:</label>
+                    <select class="form-control" id="interval" name="interval">
+                        <option value="1d">Day</option>
+                        <option value="1wk">Week</option>
+                        <option value="1mo">Month</option>
+                        <option value="3mo">Quarter</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-4 align-self-end">
+                    <button type="submit" class="btn btn-primary btn-block">Get Stocks</button>
+                </div>
+            </div>
+        </form>
+
+        <div id="profit-query-result" class="mt-4"></div>
+
+        <h2 class="text-center mt-5">Future Forecast Prediction</h2>
+        <form id="forecast-form" class="mt-4" method="POST" action="/predict">
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="symbol">Enter Stock Ticker:</label>
+                    <input type="text" class="form-control" id="symbol" name="symbol" required>
+                </div>
+                <div class="form-group col-md-4 align-self-end">
+                    <button type="submit" class="btn btn-primary btn-block">Get Prediction</button>
+                </div>
+            </div>
+        </form>
+
+        <div id="forecast-chart"></div>
+
+        <p class="text-center mt-5"><a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a></p>
+        <p class="text-center mt-5"><a href="{{ url_for('help') }}" class="btn btn-info">Help</a></p>
+        {% else %}
+        <p class="text-center mt-5">Please <a href="{{ url_for('login') }}">login</a> to view and predict stock data.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('stock-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var ticker = document.getElementById('ticker').value;
+            var interval = document.getElementById('interval').value;
+            var stock_type = document.getElementById('stock_type').value;
+            fetch(`/get_stock_data?ticker=${ticker}&interval=${interval}&stock_type=${stock_type}`)
+                .then(response => response.json())
+                .then(data => {
+                    var actualDates = data.actual.map(d => new Date(d.Date));
+                    var actualPrices = data.actual.map(d => d.Close);
+                    var predictedPrices = data.predicted.map(d => d.Predicted);
+
+                    var actualTrace = {
+                        x: actualDates,
+                        y: actualPrices,
+                        mode: 'lines',
+                        name: 'Actual'
+                    };
+
+                    var predictedTrace = {
+                        x: actualDates,
+                        y: predictedPrices,
+                        mode: 'lines',
+                        name: 'Predicted'
+                    };
+
+                    var layout = {
+                        title: `${ticker} Stock Price Prediction`,
+                        xaxis: { title: 'Date' },
+                        yaxis: { title: 'Price' }
+                    };
+
+                    var config = { displayModeBar: false };
+
+                    var chartData = [actualTrace, predictedTrace];
+                    Plotly.newPlot('chart', chartData, layout, config);
+
+                    // Fill table with data
+                    var tableBody = document.getElementById('stock-table').getElementsByTagName('tbody')[0];
+                    tableBody.innerHTML = ''; // Clear previous data
+                    data.actual.forEach((row, index) => {
+                        var newRow = tableBody.insertRow();
+                        newRow.insertCell(0).innerText = new Date(row.Date).toLocaleDateString();
+                        newRow.insertCell(1).innerText = row.Open.toFixed(2);
+                        newRow.insertCell(2).innerText = row.Close.toFixed(2);
+                        newRow.insertCell(3).innerText = row.High.toFixed(2);
+                        newRow.insertCell(4).innerText = row.Low.toFixed(2);
+                        newRow.insertCell(5).innerText = data.predicted[index].Predicted.toFixed(2);
+                        newRow.insertCell(6).innerText = (stock_type === 'profit' ? row.Profit.toFixed(2) : row.Interest.toFixed(2));
+                    });
+                });
+        });
+
+        document.getElementById('profit-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var profit_target = document.getElementById('profit-target').value;
+            var period = document.getElementById('period').value;
+            var interval = document.getElementById('interval').value;
+            fetch(`/get_profit_stocks?profit_target=${profit_target}&period=${period}&interval=${interval}`)
+                .then(response => response.json())
+                .then(data => {
+                    var resultDiv = document.getElementById('profit-query-result');
+                    resultDiv.innerHTML = ''; // Clear previous data
+                    if (data.matching_stocks.length === 0) {
+                        resultDiv.innerHTML = '<p>No stocks matched the criteria.</p>';
+                    } else {
+                        data.matching_stocks.forEach(stock => {
+                            var stockInfo = `<p>Stock: ${stock.ticker}, Buy Date: ${stock.buy_date}, Sell Date: ${stock.sell_date}, Profit: £${stock.total_profit.toFixed(2)}</p>`;
+                            resultDiv.innerHTML += stockInfo;
+                        });
+                    }
+                });
+        });
+
+        document.getElementById('forecast-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var form = event.target;
+            var formData = new FormData(form);
+            fetch(form.action, {
+                method: form.method,
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    var graphJSON = data.graphJSON;
+                    Plotly.newPlot('forecast-chart', JSON.parse(graphJSON));
+                });
+        });
+    </script>
+</body>
+</html>
